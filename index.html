@@ -3,23 +3,25 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Makerspace Radar Terminal</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/dist/Chatroom.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/index.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/themes/theme2.css" />
 
   <style>
-    /* Der dunkle Hintergrund für den Codespace-Look */
+    /* 1. BASIS-LAYOUT */
     body {
       margin: 0;
       padding: 0;
-      background-color: #0b0e14; /* Sehr dunkles Blau-Schwarz */
-      overflow: hidden; /* Verhindert Scrollen des Hintergrunds */
+      background-color: #0b0e14;
+      overflow: hidden;
       height: 100vh;
       width: 100vw;
+      font-family: sans-serif;
     }
 
-    /* Das technologische Gitter */
+    /* 2. HINTERGRUND-EFFEKTE (GRID & RADAR) */
     .grid {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -30,15 +32,14 @@
       z-index: 0;
     }
 
-    /* Der rotierende Radar-Effekt */
     .radar {
       position: fixed;
       top: 50%; left: 50%;
       width: 150vh; height: 150vh;
-      background: conic-gradient(from 0deg, rgba(0, 255, 150, 0.1) 0%, transparent 25%);
+      background: conic-gradient(from 0deg, rgba(0, 255, 150, 0.08) 0%, transparent 25%);
       transform: translate(-50%, -50%);
       border-radius: 50%;
-      animation: rotate 8s linear infinite;
+      animation: rotate 10s linear infinite;
       z-index: 1;
       pointer-events: none;
     }
@@ -48,22 +49,41 @@
       to { transform: translate(-50%, -50%) rotate(360deg); }
     }
 
-    /* Chat-Container über die Effekte legen */
+    /* 3. INTERAKTIVER PING (KLICK-EFFEKT) */
+    .ping {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      background-color: #00ff96;
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 15px #00ff96, 0 0 30px #00ff96;
+      animation: fadeOut 1.2s ease-out forwards;
+      z-index: 5;
+    }
+
+    @keyframes fadeOut {
+      0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      100% { opacity: 0; transform: translate(-50%, -50%) scale(4); }
+    }
+
+    /* 4. CHATBOT ANPASSUNG */
     .chat-container {
       position: relative;
       z-index: 10; 
       height: 100vh;
     }
 
-    /* Den Header des Chatbots an den Look anpassen */
     .chatroom .head {
-      background-color: #00ff96 !important; /* Giftgrün */
+      background-color: #00ff96 !important;
       color: #0b0e14 !important;
       font-weight: bold;
     }
   </style>
 </head>
 <body>
+
   <div class="grid"></div>
   <div class="radar"></div>
 
@@ -72,6 +92,7 @@
   <script src="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/dist/Chatroom.js"></script>
 
   <script>
+    // --- TEIL 1: CHATBOT INITIALISIERUNG ---
     if (!window.Chatroom) {
       document.body.insertAdjacentHTML('beforeend',
         '<div style="padding:12px;color:#fff;background:#c00;position:relative;z-index:100">Could not load Chatroom.js</div>');
@@ -79,13 +100,36 @@
 
     var chatroom = new window.Chatroom({
       host: "https://curly-broccoli-97pg666gr9w4c76j9-5005.app.github.dev",
-      title: "✈️ Flight & Weather Terminal",
+      title: "✈️ Radar Station",
       container: document.querySelector(".chat-container"),
-      welcomeMessage: "System online. Waiting for input...",
+      welcomeMessage: "System online. Tracking active. How can I help?",
       speechRecognition: "en-US",
       voiceLang: "en-US"
     });
     chatroom.openChat();
+
+    // --- TEIL 2: INTERAKTIVER HINTERGRUND (JavaScript) ---
+    // Wir sagen dem Browser: "Höre zu, ob irgendwo auf der Seite geklickt wird"
+    document.addEventListener('click', function(event) {
+      
+      // Erstelle ein neues Div-Element "im Kopf" des Browsers
+      const dot = document.createElement('div');
+      
+      // Weise ihm die CSS-Klasse "ping" zu (die wir oben im Style definiert haben)
+      dot.className = 'ping';
+      
+      // Setze die Position genau dorthin, wo die Maus geklickt hat
+      dot.style.left = event.clientX + 'px';
+      dot.style.top = event.clientY + 'px';
+      
+      // Füge den Punkt tatsächlich in die Webseite ein
+      document.body.appendChild(dot);
+      
+      // Warte 1200 Millisekunden (1.2 Sek) und lösche den Punkt dann wieder
+      setTimeout(() => {
+        dot.remove();
+      }, 1200);
+    });
   </script>
 </body>
 </html>
