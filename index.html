@@ -3,131 +3,165 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Makerspace Radar - Fixed UI</title>
+  <title>Advanced Radar Terminal</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/dist/Chatroom.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/index.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/themes/theme2.css" />
 
   <style>
-    /* 1. BASIS SETUP */
-    body { 
-      margin: 0; padding: 0; background-color: #0b0e14; 
-      overflow: hidden; height: 100vh; width: 100vw; 
-      transition: background-color 0.4s;
+    body {
+      margin: 0; padding: 0;
+      background-color: #0b0e14;
+      overflow: hidden;
+      height: 100vh; width: 100vw;
+      transition: background-color 0.5s; /* Für den Alarm-Modus */
     }
 
-    /* 2. HINTERGRUND-EBENEN (z-index 0 bis 5) */
-    /* pointer-events: none sorgt dafür, dass man durch diese Ebenen durchklicken kann */
-    .grid, .radar, .aircraft, .ping { 
-      pointer-events: none !important; 
+    /* 1. HINTERGRUND & RADAR */
+    .grid {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-image: linear-gradient(rgba(0, 255, 150, 0.05) 1px, transparent 1px),
+                        linear-gradient(90deg, rgba(0, 255, 150, 0.05) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: 0;
     }
 
-    .grid { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(rgba(0, 255, 150, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 150, 0.05) 1px, transparent 1px); background-size: 50px 50px; z-index: 0; }
-    .radar { position: fixed; top: 50%; left: 50%; width: 150vh; height: 150vh; background: conic-gradient(from 0deg, rgba(0, 255, 150, 0.08) 0%, transparent 25%); transform: translate(-50%, -50%); border-radius: 50%; animation: rotate 10s linear infinite; z-index: 1; }
-    .aircraft { position: fixed; width: 5px; height: 5px; background: #00ff96; border-radius: 50%; box-shadow: 0 0 10px #00ff96; z-index: 2; animation: blink 0.8s infinite alternate; }
-    
-    @keyframes blink { from { opacity: 0.4; } to { opacity: 1; } }
+    .radar {
+      position: fixed;
+      top: 50%; left: 50%;
+      width: 150vh; height: 150vh;
+      background: conic-gradient(from 0deg, rgba(0, 255, 150, 0.08) 0%, transparent 25%);
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      animation: rotate 10s linear infinite;
+      z-index: 1;
+      pointer-events: none;
+    }
+
     @keyframes rotate { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-    .ping { position: fixed; width: 8px; height: 8px; background-color: #00ff96; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px #00ff96; animation: fadeOut 1.2s ease-out forwards; z-index: 5; }
+    /* 2. AUTOMATISCHE FLUGZEUGE (RANDOM CONTACTS) */
+    .aircraft {
+      position: fixed;
+      width: 4px; height: 4px;
+      background: #00ff96;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #00ff96;
+      z-index: 2;
+      animation: blink 1s infinite alternate;
+    }
+    @keyframes blink { from { opacity: 0.3; } to { opacity: 1; } }
+
+    /* 3. INTERAKTIVE PINGS & ALARM */
+    .ping {
+      position: fixed;
+      width: 8px; height: 8px;
+      background-color: #00ff96;
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 15px #00ff96;
+      animation: fadeOut 1.2s ease-out forwards;
+      z-index: 5;
+    }
     .ping.danger { background-color: #ff4b2b; box-shadow: 0 0 15px #ff4b2b; }
     @keyframes fadeOut { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(4); } }
 
-    /* 3. CHAT-EBENE (Z-INDEX 9999) */
-    .chat-container { 
-      position: absolute; /* Geändert von fixed auf absolute */
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      z-index: 9999 !important; 
-      pointer-events: none; /* Container selbst lässt Klicks durch... */
+    /* 4. MEIN FAVORIT: GLASSMORPHISM CHAT BUBBLES */
+    .chatroom .msg {
+      background: rgba(255, 255, 255, 0.05) !important;
+      backdrop-filter: blur(10px); /* Glas-Effekt */
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: #fff !important;
+      border-radius: 15px !important;
     }
-
-    /* ...aber das Chat-Fenster darin fängt Klicks ein! */
-    .chatroom {
-      pointer-events: auto !important;
-      position: relative;
-    }
-
-    .chatroom .msg { 
-      background: rgba(20, 25, 35, 0.8) !important; /* Etwas weniger transparent für bessere Lesbarkeit */
-      backdrop-filter: blur(8px); 
-      border: 1px solid rgba(0, 255, 150, 0.2) !important; 
-      color: #fff !important; 
-    }
-    .chatroom .head { background-color: #00ff96 !important; color: #0b0e14 !important; font-weight: bold; }
+    .chatroom .head { background-color: #00ff96 !important; color: #0b0e14 !important; }
+    .chat-container { position: relative; z-index: 10; height: 100vh; }
   </style>
 </head>
 <body>
+
   <div class="grid"></div>
   <div class="radar"></div>
   <div class="chat-container"></div>
 
   <script src="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/dist/Chatroom.js"></script>
+
   <script>
     // --- CHATBOT INITIALISIERUNG ---
     var chatroom = new window.Chatroom({
       host: "https://curly-broccoli-97pg666gr9w4c76j9-5005.app.github.dev",
-      title: "🛰️ SkyNet Terminal",
+      title: "🛰️ SkyNet Control",
       container: document.querySelector(".chat-container"),
-      welcomeMessage: "System Ready.",
-      onMessageReceived: function(message) { 
-        if (message.text && message.text.toLowerCase().includes("alert")) triggerEmergency(); 
-      }
+      welcomeMessage: "Terminal active. Scanning airspace...",
+      speechRecognition: "en-US",
+      voiceLang: "en-US"
     });
     chatroom.openChat();
 
     // --- SOUND ENGINE ---
-    function playPingSound(freq = 880, volume = 0.1, type = 'sine') {
+    function playSound(freq = 880, volume = 0.1, duration = 0.5) {
       try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const oscillator = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
-        oscillator.type = type; 
+        oscillator.type = 'sine';
         oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
         gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.0);
-        oscillator.connect(gainNode); gainNode.connect(audioCtx.destination);
-        oscillator.start(); oscillator.stop(audioCtx.currentTime + 1.0);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + duration);
       } catch (e) {}
     }
 
-    function triggerEmergency() { 
-      document.body.style.backgroundColor = "#330000"; 
-      playPingSound(150, 0.2, 'sawtooth'); 
-      setTimeout(() => { document.body.style.backgroundColor = "#0b0e14"; }, 600); 
-    }
-
-    // --- KLICK-LOGIK ---
+    // --- KLICK-INTERAKTION & ALARM-LOGIK ---
     document.addEventListener('mousedown', function(event) {
-      // Wenn der Klick innerhalb des Chatrooms landet, machen wir KEINEN Radar-Ping
-      if (event.target.closest('.chatroom')) return;
+      // Wenn man mit der rechten Maustaste klickt (oder Strg+Klick), gibt es Alarm!
+      const isAlt = event.altKey || event.button === 2;
+      
+      if (isAlt) {
+        document.body.style.backgroundColor = "#2e0b0b"; // Dunkelrot
+        playSound(110, 0.2, 1); // Tiefer Alarmton
+        setTimeout(() => { document.body.style.backgroundColor = "#0b0e14"; }, 500);
+      } else {
+        playSound(880); // Normaler Ping
+      }
 
-      playPingSound(880, 0.15);
       const dot = document.createElement('div');
-      dot.className = 'ping';
+      dot.className = isAlt ? 'ping danger' : 'ping';
       dot.style.left = event.clientX + 'px';
       dot.style.top = event.clientY + 'px';
       document.body.appendChild(dot);
       setTimeout(() => { dot.remove(); }, 1200);
     });
 
-    // --- FLUGZEUG SIMULATION ---
+    // --- AUTOMATISCHE FLUGZEUG-SIMULATION ---
     function spawnAircraft() {
-      playPingSound(660, 0.03);
       const aircraft = document.createElement('div');
       aircraft.className = 'aircraft';
-      aircraft.style.top = (Math.random() * (window.innerHeight - 150) + 50) + 'px';
+      const startY = Math.random() * window.innerHeight;
+      aircraft.style.top = startY + 'px';
       aircraft.style.left = '-10px';
       document.body.appendChild(aircraft);
+
+      // Flugzeug bewegt sich über den Schirm
       let pos = -10;
       const interval = setInterval(() => {
-        pos += 0.6;
+        pos += 0.5;
         aircraft.style.left = pos + 'px';
-        if (pos > window.innerWidth) { clearInterval(interval); aircraft.remove(); }
+        if (pos > window.innerWidth) {
+          clearInterval(interval);
+          aircraft.remove();
+        }
       }, 50);
     }
-    setInterval(spawnAircraft, 12000);
+    
+    // Alle 5-10 Sekunden ein neues "UFO"
+    setInterval(spawnAircraft, Math.random() * 5000 + 5000);
   </script>
 </body>
 </html>
