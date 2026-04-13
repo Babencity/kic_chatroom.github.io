@@ -4,29 +4,84 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
 
-  <!-- Chatroom styles via jsDelivr -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/dist/Chatroom.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/index.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/themes/theme2.css" />
+
+  <style>
+    /* Der dunkle Hintergrund für den Codespace-Look */
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0b0e14; /* Sehr dunkles Blau-Schwarz */
+      overflow: hidden; /* Verhindert Scrollen des Hintergrunds */
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* Das technologische Gitter */
+    .grid {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-image: 
+        linear-gradient(rgba(0, 255, 150, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 150, 0.05) 1px, transparent 1px);
+      background-size: 50px 50px;
+      z-index: 0;
+    }
+
+    /* Der rotierende Radar-Effekt */
+    .radar {
+      position: fixed;
+      top: 50%; left: 50%;
+      width: 150vh; height: 150vh;
+      background: conic-gradient(from 0deg, rgba(0, 255, 150, 0.1) 0%, transparent 25%);
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      animation: rotate 8s linear infinite;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    @keyframes rotate {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    /* Chat-Container über die Effekte legen */
+    .chat-container {
+      position: relative;
+      z-index: 10; 
+      height: 100vh;
+    }
+
+    /* Den Header des Chatbots an den Look anpassen */
+    .chatroom .head {
+      background-color: #00ff96 !important; /* Giftgrün */
+      color: #0b0e14 !important;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
+  <div class="grid"></div>
+  <div class="radar"></div>
+
   <div class="chat-container"></div>
 
-  <!-- Chatroom script via jsDelivr -->
   <script src="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/dist/Chatroom.js"></script>
 
   <script>
-    // Fail-fast hint if the script didn't load
     if (!window.Chatroom) {
       document.body.insertAdjacentHTML('beforeend',
-        '<div style="padding:12px;color:#fff;background:#c00">Could not load Chatroom.js</div>');
+        '<div style="padding:12px;color:#fff;background:#c00;position:relative;z-index:100">Could not load Chatroom.js</div>');
     }
 
     var chatroom = new window.Chatroom({
       host: "https://curly-broccoli-97pg666gr9w4c76j9-5005.app.github.dev",
-      title: "Chat with a bot",
+      title: "✈️ Flight & Weather Terminal",
       container: document.querySelector(".chat-container"),
-      welcomeMessage: "Nice to meet you.",
+      welcomeMessage: "System online. Waiting for input...",
       speechRecognition: "en-US",
       voiceLang: "en-US"
     });
