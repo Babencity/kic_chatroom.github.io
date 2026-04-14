@@ -75,6 +75,9 @@
 
     .chatroom .footer { background: transparent !important; border-top: 1px solid rgba(0, 255, 150, 0.2) !important; }
     .chatroom #textInput { background: rgba(0,0,0,0.3) !important; color: white !important; border: 1px solid rgba(0, 255, 150, 0.2) !important; }
+    
+    /* Audio verstecken */
+    #kenobi-sound { display: none; }
   </style>
 </head>
 <body>
@@ -82,9 +85,109 @@
   <div class="grid"></div>
   <div class="radar"></div>
   <div class="chat-container"></div>
+  
+  <audio id="kenobi-sound" preload="auto">
+    <source src="https://www.myinstants.com/media/sounds/hello_there.mp3" type="audio/mpeg">
+  </audio>
 
   <script src="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/dist/Chatroom.js"></script>
   <script>
     // CHATBOT INITIALISIERUNG
     var chatroom = new window.Chatroom({
-      host: "https
+      host: "https://curly-broccoli-97pg666gr9w4c76j9-5005.app.github.dev",
+      title: "🛰️ SkyNet Terminal",
+      container: document.querySelector(".chat-container"),
+      welcomeMessage: "System Ready. Airspace secure.",
+      onMessageReceived: function(message) {
+        console.log("Nachricht vom Bot:", message);
+        
+        const text = (message.text || "").toLowerCase();
+        
+        // 1. Notfall Check
+        if (text.includes("alert")) {
+          triggerEmergency();
+        }
+        
+        // 2. Kenobi Check
+        const hasKenobiImage = message.image && message.image.includes("General_Kenobi");
+        if (text.includes("kenobi") || hasKenobiImage) {
+          triggerKenobiEffect();
+        }
+      }
+    });
+    chatroom.openChat();
+
+    // SOUND ENGINE
+    function playPingSound(freq = 880, volume = 0.1, type = 'sine') {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.0);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 1.0);
+      } catch (e) {}
+    }
+
+    function triggerEmergency() {
+      document.body.style.backgroundColor = "#440000";
+      playPingSound(150, 0.2, 'sawtooth');
+      setTimeout(() => { document.body.style.backgroundColor = "#0b0e14"; }, 700);
+    }
+
+    function triggerKenobiEffect() {
+      // Blaues Leuchten
+      document.body.style.backgroundColor = "#001a33";
+      
+      // Sound abspielen über das HTML Element
+      const audio = document.getElementById('kenobi-sound');
+      if (audio) {
+        audio.currentTime = 0; // Zurück zum Anfang
+        audio.volume = 0.7;
+        audio.play().catch(err => {
+          console.error("Audio konnte nicht abgespielt werden:", err);
+        });
+      }
+
+      setTimeout(() => { 
+        document.body.style.backgroundColor = "#0b0e14"; 
+      }, 1000);
+    }
+
+    // RADAR PING BEIM KLICKEN
+    document.addEventListener('mousedown', function(event) {
+      if (event.target.closest('.chatroom')) return;
+      playPingSound(880, 0.15);
+      const dot = document.createElement('div');
+      dot.className = 'ping';
+      dot.style.left = event.clientX + 'px';
+      dot.style.top = event.clientY + 'px';
+      document.body.appendChild(dot);
+      setTimeout(() => { dot.remove(); }, 1200);
+    });
+
+    // ZUFÄLLIGE FLUGZEUGE
+    function spawnAircraft() {
+      playPingSound(600, 0.04);
+      const aircraft = document.createElement('div');
+      aircraft.className = 'aircraft';
+      aircraft.style.top = (Math.random() * (window.innerHeight - 150) + 50) + 'px';
+      aircraft.style.left = '-10px';
+      document.body.appendChild(aircraft);
+      let pos = -10;
+      const speed = Math.random() * 0.4 + 0.3;
+      const interval = setInterval(() => {
+        pos += speed;
+        aircraft.style.left = pos + 'px';
+        if (pos > window.innerWidth) { clearInterval(interval); aircraft.remove(); }
+      }, 50);
+    }
+    setInterval(spawnAircraft, 12000);
+  </script>
+</body>
+</html>
