@@ -10,19 +10,72 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/themes/theme2.css" />
 
   <style>
-    body { margin: 0; padding: 0; background-color: #0b0e14; overflow: hidden; height: 100vh; width: 100vw; transition: background-color 0.4s; }
+    /* 1. BASIS & HINTERGRUND */
+    body { 
+      margin: 0; padding: 0; background-color: #0b0e14; 
+      overflow: hidden; height: 100vh; width: 100vw; 
+      transition: background-color 0.4s;
+    }
+
+    /* Klicks gehen durch Radar & Flugzeuge hindurch */
     .grid, .radar, .aircraft, .ping { pointer-events: none !important; }
+
     .grid { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(rgba(0, 255, 150, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 150, 0.05) 1px, transparent 1px); background-size: 50px 50px; z-index: 0; }
-    .radar { position: fixed; top: 50%; left: 50%; width: 150vh; height: 150vh; background: conic-gradient(from 0deg, rgba(0, 255, 150, 0.08) 0%, transparent 25%); transform: translate(-50%, -50%); border-radius: 50%; animation: rotate 10s linear infinite; z-index: 1; }
+    
+    .radar { 
+      position: fixed; top: 50%; left: 50%; width: 150vh; height: 150vh; 
+      background: conic-gradient(from 0deg, rgba(0, 255, 150, 0.08) 0%, transparent 25%); 
+      transform: translate(-50%, -50%); border-radius: 50%; 
+      animation: rotate 10s linear infinite; z-index: 1; 
+    }
     @keyframes rotate { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+
     .aircraft { position: fixed; width: 5px; height: 5px; background: #00ff96; border-radius: 50%; box-shadow: 0 0 10px #00ff96; z-index: 2; animation: blink 0.8s infinite alternate; }
     @keyframes blink { from { opacity: 0.4; } to { opacity: 1; } }
+
     .ping { position: fixed; width: 8px; height: 8px; background-color: #00ff96; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px #00ff96; animation: fadeOut 1.2s ease-out forwards; z-index: 5; }
     .ping.danger { background-color: #ff4b2b; box-shadow: 0 0 15px #ff4b2b; }
     @keyframes fadeOut { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(4); } }
-    .chat-container { position: fixed !important; bottom: 20px !important; right: 20px !important; width: 380px !important; height: 550px !important; z-index: 9999 !important; pointer-events: auto !important; }
-    .chatroom { width: 100% !important; height: 100% !important; background: rgba(10, 20, 30, 0.6) !important; backdrop-filter: blur(20px) !important; border: 1px solid rgba(0, 255, 150, 0.3) !important; border-radius: 15px !important; box-shadow: 0 10px 50px rgba(0,0,0,0.8) !important; }
-    .chatroom .msg { background: rgba(255, 255, 255, 0.1) !important; color: #00ff96 !important; border-radius: 12px !important; }
+
+    /* 2. CHAT-CONTAINER (Festgelegte Größe & Position) */
+    .chat-container { 
+      position: fixed !important; 
+      bottom: 20px !important; 
+      right: 20px !important;
+      width: 380px !important; 
+      height: 550px !important;
+      z-index: 9999 !important; 
+      pointer-events: auto !important; /* Hier sind Klicks erlaubt */
+    }
+
+    /* 3. GLAS-OPTIK FÜR DAS WIDGET */
+    .chatroom {
+      width: 100% !important;
+      height: 100% !important;
+      background: rgba(10, 20, 30, 0.6) !important; /* Transparenz */
+      backdrop-filter: blur(20px) !important; 
+      -webkit-backdrop-filter: blur(20px) !important;
+      border: 1px solid rgba(0, 255, 150, 0.3) !important;
+      border-radius: 15px !important;
+      box-shadow: 0 10px 50px rgba(0,0,0,0.8) !important;
+    }
+
+    .chatroom .msg {
+      background: rgba(255, 255, 255, 0.1) !important;
+      backdrop-filter: blur(10px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: #00ff96 !important; 
+      border-radius: 12px !important;
+    }
+
+    .chatroom .head {
+      background: rgba(0, 255, 150, 0.15) !important;
+      color: #00ff96 !important;
+      border-bottom: 1px solid rgba(0, 255, 150, 0.3) !important;
+    }
+
+    .chatroom .footer { background: transparent !important; border-top: 1px solid rgba(0, 255, 150, 0.2) !important; }
+    .chatroom #textInput { background: rgba(0,0,0,0.3) !important; color: white !important; border: 1px solid rgba(0, 255, 150, 0.2) !important; }
   </style>
 </head>
 <body>
@@ -33,74 +86,56 @@
 
   <script src="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/dist/Chatroom.js"></script>
   <script>
-    let globalAudioCtx;
-    
-    // DER SOUND ALS DATA-URI (Base64)
-    // Dies ist eine gekürzte Version von "Hello There", damit sie in die Nachricht passt.
-    const kenobiSoundBase64 = "data:audio/mpeg;base64,SUQzBAAAAAAAF1RTU0UAAAANAAADTGF2YzYwLjMxLjEwMAD/+0000GAAAAA..."; // Hier wäre der extrem lange String
-
-    // Da der String oben den Rahmen sprengt, nutzen wir eine sicherere Methode für dich:
-    // Wir nutzen eine kleine "Tarnung": Wir laden den Sound erst, wenn du das erste Mal klickst.
-
+    // CHATBOT INITIALISIERUNG
     var chatroom = new window.Chatroom({
       host: "https://curly-broccoli-97pg666gr9w4c76j9-5005.app.github.dev",
       title: "🛰️ SkyNet Terminal",
       container: document.querySelector(".chat-container"),
       welcomeMessage: "System Ready. Airspace secure.",
       onMessageReceived: function(message) {
-        const text = (message.text || "").toLowerCase();
-        if (text.includes("general") || (message.image && message.image.includes("Kenobi"))) {
-          triggerKenobiEffect();
-        }
-        if (text.includes("alert")) triggerEmergency();
+        if (message.text && message.text.toLowerCase().includes("alert")) triggerEmergency();
       }
     });
     chatroom.openChat();
 
-    function triggerKenobiEffect() {
-      console.log("Effekt Start");
-      document.body.style.backgroundColor = "#001a33";
-      
-      // EXTREM WICHTIG: Wir nutzen jetzt eine URL, die direkt von Google kommt (sehr hohe Vertrauenswürdigkeit)
-      const audio = new Audio("https://actions.google.com/sounds/v1/foley/beeping_computer_sci_fi.ogg");
-      audio.volume = 1.0;
-      
-      // Falls du den echten Kenobi Sound lokal hast, lege ihn neben die index.html und nutze:
-      // const audio = new Audio("hello.mp3");
-
-      audio.play().catch(e => console.log("Immer noch geblockt:", e));
-      
-      setTimeout(() => { document.body.style.backgroundColor = "#0b0e14"; }, 1000);
-    }
-
-    function playPingSound(freq = 880, volume = 0.1) {
-      if (!globalAudioCtx) globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = globalAudioCtx.createOscillator();
-      const gainNode = globalAudioCtx.createGain();
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(freq, globalAudioCtx.currentTime);
-      gainNode.gain.setValueAtTime(volume, globalAudioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.0001, globalAudioCtx.currentTime + 1.0);
-      oscillator.connect(gainNode);
-      gainNode.connect(globalAudioCtx.destination);
-      oscillator.start();
-      oscillator.stop(globalAudioCtx.currentTime + 1.0);
+    // SOUND ENGINE
+    function playPingSound(freq = 880, volume = 0.1, type = 'sine') {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(volume, audioCtx.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.0);
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.start();
+        oscillator.stop(audioCtx.currentTime + 1.0);
+      } catch (e) {}
     }
 
     function triggerEmergency() {
       document.body.style.backgroundColor = "#440000";
-      playPingSound(150, 0.2);
+      playPingSound(150, 0.2, 'sawtooth');
       setTimeout(() => { document.body.style.backgroundColor = "#0b0e14"; }, 700);
     }
 
-    document.addEventListener('mousedown', function() {
-      if (!globalAudioCtx) globalAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (globalAudioCtx.state === 'suspended') globalAudioCtx.resume();
-      playPingSound(880, 0.1);
+    // RADAR PING BEIM KLICKEN
+    document.addEventListener('mousedown', function(event) {
+      if (event.target.closest('.chatroom')) return;
+      playPingSound(880, 0.15);
+      const dot = document.createElement('div');
+      dot.className = 'ping';
+      dot.style.left = event.clientX + 'px';
+      dot.style.top = event.clientY + 'px';
+      document.body.appendChild(dot);
+      setTimeout(() => { dot.remove(); }, 1200);
     });
 
+    // ZUFÄLLIGE FLUGZEUGE
     function spawnAircraft() {
-      playPingSound(600, 0.02);
+      playPingSound(600, 0.04);
       const aircraft = document.createElement('div');
       aircraft.className = 'aircraft';
       aircraft.style.top = (Math.random() * (window.innerHeight - 150) + 50) + 'px';
