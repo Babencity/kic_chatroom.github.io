@@ -17,7 +17,6 @@
       transition: background-color 0.4s;
     }
 
-    /* Klicks gehen durch Radar & Flugzeuge hindurch */
     .grid, .radar, .aircraft, .ping { pointer-events: none !important; }
 
     .grid { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(rgba(0, 255, 150, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 255, 150, 0.05) 1px, transparent 1px); background-size: 50px 50px; z-index: 0; }
@@ -37,7 +36,7 @@
     .ping.danger { background-color: #ff4b2b; box-shadow: 0 0 15px #ff4b2b; }
     @keyframes fadeOut { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(4); } }
 
-    /* 2. CHAT-CONTAINER (Festgelegte Größe & Position) */
+    /* 2. CHAT-CONTAINER */
     .chat-container { 
       position: fixed !important; 
       bottom: 20px !important; 
@@ -45,20 +44,23 @@
       width: 380px !important; 
       height: 550px !important;
       z-index: 9999 !important; 
-      pointer-events: auto !important; /* Hier sind Klicks erlaubt */
+      pointer-events: auto !important;
     }
 
-    /* 3. GLAS-OPTIK FÜR DAS WIDGET */
+    /* 3. GLAS-OPTIK & AUDIO HIDDEN */
     .chatroom {
       width: 100% !important;
       height: 100% !important;
-      background: rgba(10, 20, 30, 0.6) !important; /* Transparenz */
+      background: rgba(10, 20, 30, 0.6) !important;
       backdrop-filter: blur(20px) !important; 
       -webkit-backdrop-filter: blur(20px) !important;
       border: 1px solid rgba(0, 255, 150, 0.3) !important;
       border-radius: 15px !important;
       box-shadow: 0 10px 50px rgba(0,0,0,0.8) !important;
     }
+
+    /* Verhindert, dass der Audio-Player im Chat sichtbar wird */
+    .chatroom audio { display: none; }
 
     .chatroom .msg {
       background: rgba(255, 255, 255, 0.1) !important;
@@ -93,7 +95,15 @@
       container: document.querySelector(".chat-container"),
       welcomeMessage: "System Ready. Airspace secure.",
       onMessageReceived: function(message) {
-        if (message.text && message.text.toLowerCase().includes("alert")) triggerEmergency();
+        // Notfall-Alert
+        if (message.text && message.text.toLowerCase().includes("alert")) {
+            triggerEmergency();
+        }
+        
+        // NEU: Obi-Wan Effekt
+        if (message.text && message.text.toLowerCase().includes("kenobi")) {
+            triggerKenobiEffect();
+        }
       }
     });
     chatroom.openChat();
@@ -119,6 +129,21 @@
       document.body.style.backgroundColor = "#440000";
       playPingSound(150, 0.2, 'sawtooth');
       setTimeout(() => { document.body.style.backgroundColor = "#0b0e14"; }, 700);
+    }
+
+    // NEU: Funktion für den Kenobi-Sound und blaues Blinken
+    function triggerKenobiEffect() {
+      // Blaues Leuchten
+      document.body.style.backgroundColor = "#001a33";
+      
+      // Sound abspielen
+      const audio = new Audio('https://www.myinstants.com/media/sounds/hello_there.mp3');
+      audio.volume = 0.5;
+      audio.play().catch(e => console.log("Autoplay blocked or link broken"));
+
+      setTimeout(() => { 
+        document.body.style.backgroundColor = "#0b0e14"; 
+      }, 800);
     }
 
     // RADAR PING BEIM KLICKEN
