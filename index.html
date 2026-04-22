@@ -3,24 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Radar Terminal</title>
+<title>Advanced Radar Terminal</title>
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/dist/Chatroom.css" />
 
 <style>
-body {
-  margin: 0;
-  background: #0b0e14;
-  overflow: hidden;
-  font-family: Arial, sans-serif;
-}
+body { margin:0; background:#0b0e14; overflow:hidden; font-family:Arial; }
+canvas { position:fixed; top:0; left:0; }
 
-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-}
-
+/* Chat */
 .chat-container {
   position: fixed;
   right: 20px;
@@ -31,37 +22,33 @@ canvas {
 }
 
 .chatroom {
-  height: 100% !important;
-  display: flex;
-  flex-direction: column;
-  background: rgba(10,20,30,0.7) !important;
-  backdrop-filter: blur(15px);
-  border-radius: 15px;
-  border: 1px solid rgba(0,255,150,0.3);
+  height:100%!important;
+  display:flex;
+  flex-direction:column;
+  background:rgba(10,20,30,0.7)!important;
+  backdrop-filter:blur(15px);
+  border-radius:15px;
+  border:1px solid rgba(0,255,150,0.3);
 }
 
-.chatroom .messages {
-  flex: 1;
-  overflow-y: auto;
+/* UI Panel */
+.ui-panel {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 20;
+  color: #00ff96;
+  background: rgba(0,0,0,0.4);
   padding: 10px;
-}
-
-.chatroom .msg {
-  font-size: 14px !important;
-  line-height: 1.5 !important;
-  padding: 8px 10px;
   border-radius: 10px;
-  color: #00ff96 !important;
-  background: rgba(255,255,255,0.08);
+  font-size: 13px;
 }
-
-.chatroom .footer {
-  padding: 8px;
-}
-
-.chatroom #textInput {
-  height: 40px !important;
-  font-size: 14px;
+button {
+  background: transparent;
+  color: #00ff96;
+  border: 1px solid #00ff96;
+  margin-top:5px;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -70,14 +57,21 @@ canvas {
 <canvas id="radar"></canvas>
 <div class="chat-container"></div>
 
+<div class="ui-panel">
+  <div>Radar Controls</div>
+  <button onclick="toggleSound()">Sound</button><br>
+  <button onclick="toggleTrails()">Trails</button>
+</div>
+
 <script src="https://cdn.jsdelivr.net/gh/weberi/chatroom@master/dist/Chatroom.js"></script>
 
 <script>
 // ================= CONFIG =================
 const CONFIG = {
-  aircraftSpawnRate: 8000,
-  aircraftSpeed: 1.2,
-  pingDuration: 1000
+  spawnRate: 6000,
+  speed: 1.2,
+  pingDuration: 1000,
+  collisionDist: 40
 };
 
 // ================= CANVAS =================
@@ -92,146 +86,197 @@ resize();
 window.addEventListener("resize", resize);
 
 // ================= AUDIO =================
+let soundEnabled = true;
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-function playSound(freq, volume = 0.1) {
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-
-  osc.frequency.value = freq;
-  gain.gain.value = volume;
-
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-
-  osc.start();
-  gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1);
-  osc.stop(audioCtx.currentTime + 1);
+function playSound(freq, volume=0.1){
+  if(!soundEnabled) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.frequency.value = freq;
+  g.gain.value = volume;
+  o.connect(g); g.connect(audioCtx.destination);
+  o.start();
+  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+1);
+  o.stop(audioCtx.currentTime+1);
 }
+
+function toggleSound(){ soundEnabled = !soundEnabled; }
 
 // ================= STATE =================
 let aircrafts = [];
 let pings = [];
+let trailsEnabled = true;
+let mouse = {x:0,y:0};
 
-// ================= AIRCRAFT LOGIK =================
-function spawnAircraft() {
-  const edge = Math.floor(Math.random() * 4);
-  let x, y;
+// ================= AIRCRAFT =================
+function spawnAircraft(){
+  const edge = Math.floor(Math.random()*4);
+  let x,y;
 
-  // Spawn an zufälligem Rand
-  if (edge === 0) { // links
-    x = -20;
-    y = Math.random() * canvas.height;
-  } else if (edge === 1) { // rechts
-    x = canvas.width + 20;
-    y = Math.random() * canvas.height;
-  } else if (edge === 2) { // oben
-    x = Math.random() * canvas.width;
-    y = -20;
-  } else { // unten
-    x = Math.random() * canvas.width;
-    y = canvas.height + 20;
-  }
+  if(edge===0){ x=-20; y=Math.random()*canvas.height;}
+  if(edge===1){ x=canvas.width+20; y=Math.random()*canvas.height;}
+  if(edge===2){ x=Math.random()*canvas.width; y=-20;}
+  if(edge===3){ x=Math.random()*canvas.width; y=canvas.height+20;}
 
-  // Ziel irgendwo im Bildschirm
-  const targetX = Math.random() * canvas.width;
-  const targetY = Math.random() * canvas.height;
+  const tx = Math.random()*canvas.width;
+  const ty = Math.random()*canvas.height;
 
-  const dx = targetX - x;
-  const dy = targetY - y;
-  const length = Math.sqrt(dx * dx + dy * dy);
+  const dx = tx-x;
+  const dy = ty-y;
+  const len = Math.hypot(dx,dy);
 
   aircrafts.push({
-    x,
-    y,
-    vx: (dx / length) * CONFIG.aircraftSpeed,
-    vy: (dy / length) * CONFIG.aircraftSpeed,
-    angle: Math.atan2(dy, dx)
+    x,y,
+    vx: dx/len*CONFIG.speed,
+    vy: dy/len*CONFIG.speed,
+    angle: Math.atan2(dy,dx),
+    trail: [],
+    id: Math.floor(Math.random()*999)
   });
 
-  playSound(600, 0.05);
+  playSound(600,0.05);
 }
 
-function drawAircraft(a) {
+function drawAircraft(a){
+  // Trail
+  if(trailsEnabled){
+    a.trail.push({x:a.x,y:a.y});
+    if(a.trail.length>20) a.trail.shift();
+
+    ctx.beginPath();
+    a.trail.forEach((p,i)=>{
+      ctx.lineTo(p.x,p.y);
+    });
+    ctx.strokeStyle="rgba(0,255,150,0.2)";
+    ctx.stroke();
+  }
+
   ctx.save();
-  ctx.translate(a.x, a.y);
+  ctx.translate(a.x,a.y);
   ctx.rotate(a.angle);
 
   ctx.beginPath();
-  ctx.moveTo(10, 0);
-  ctx.lineTo(-6, -4);
-  ctx.lineTo(-3, 0);
-  ctx.lineTo(-6, 4);
+  ctx.moveTo(10,0);
+  ctx.lineTo(-6,-4);
+  ctx.lineTo(-3,0);
+  ctx.lineTo(-6,4);
   ctx.closePath();
 
-  ctx.fillStyle = "#00ff96";
-  ctx.fill();
+  // Nähe zur Maus färben
+  const dist = Math.hypot(a.x-mouse.x,a.y-mouse.y);
+  ctx.fillStyle = dist < 80 ? "#ff4b2b" : "#00ff96";
 
+  ctx.fill();
   ctx.restore();
+
+  // Hover Info
+  if(dist < 50){
+    ctx.fillStyle="#00ff96";
+    ctx.fillText("ID:"+a.id, a.x+10, a.y-10);
+  }
 }
 
-// ================= EVENTS =================
-document.addEventListener("mousedown", (e) => {
-  if (e.target.closest(".chatroom")) return;
-  pings.push({ x: e.clientX, y: e.clientY, start: Date.now() });
+// ================= INTERACTION =================
+document.addEventListener("mousemove", e=>{
+  mouse.x=e.clientX;
+  mouse.y=e.clientY;
 });
+
+document.addEventListener("mousedown", e=>{
+  pings.push({x:e.clientX,y:e.clientY,start:Date.now()});
+  playSound(880,0.15);
+});
+
+// ================= COLLISION =================
+function checkCollisions(){
+  for(let i=0;i<aircrafts.length;i++){
+    for(let j=i+1;j<aircrafts.length;j++){
+      const a=aircrafts[i], b=aircrafts[j];
+      const d=Math.hypot(a.x-b.x,a.y-b.y);
+      if(d<CONFIG.collisionDist){
+        ctx.strokeStyle="#ff0000";
+        ctx.beginPath();
+        ctx.moveTo(a.x,a.y);
+        ctx.lineTo(b.x,b.y);
+        ctx.stroke();
+      }
+    }
+  }
+}
 
 // ================= CHAT =================
-const chatroom = new window.Chatroom({
-  host: "https://curly-broccoli-97pg666gr9w4c76j9-5005.app.github.dev",
-  title: "SkyNet Terminal",
-  container: document.querySelector(".chat-container"),
-  welcomeMessage: "System Ready."
-});
-chatroom.openChat();
+new window.Chatroom({
+  host:"https://curly-broccoli-97pg666gr9w4c76j9-5005.app.github.dev",
+  container:document.querySelector(".chat-container"),
+  title:"SkyNet Terminal",
+  welcomeMessage:"System Ready."
+}).openChat();
 
 // ================= LOOP =================
-let lastSpawn = 0;
+let lastSpawn=0;
 
-function draw(time) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+function draw(time){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-  const cx = canvas.width / 2;
-  const cy = canvas.height / 2;
-  const radius = Math.min(canvas.width, canvas.height) / 2;
+  // Radar
+  const cx=canvas.width/2, cy=canvas.height/2;
+  const r=Math.min(canvas.width,canvas.height)/2;
 
-  // Radar-Kreis
   ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(0,255,150,0.2)";
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle="rgba(0,255,150,0.2)";
   ctx.stroke();
 
-  // Sweep
-  const angle = time * 0.001;
+  const ang=time*0.001;
   ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.arc(cx, cy, radius, angle, angle + 0.3);
-  ctx.fillStyle = "rgba(0,255,150,0.1)";
+  ctx.moveTo(cx,cy);
+  ctx.arc(cx,cy,r,ang,ang+0.3);
+  ctx.fillStyle="rgba(0,255,150,0.1)";
   ctx.fill();
 
-  // Flugzeuge bewegen
-  aircrafts.forEach(a => {
-    a.x += a.vx;
-    a.y += a.vy;
+  // Aircraft
+  aircrafts.forEach(a=>{
+    a.x+=a.vx;
+    a.y+=a.vy;
     drawAircraft(a);
   });
 
-  // Entfernen wenn außerhalb
-  aircrafts = aircrafts.filter(a =>
-    a.x > -50 && a.x < canvas.width + 50 &&
-    a.y > -50 && a.y < canvas.height + 50
+  aircrafts=aircrafts.filter(a =>
+    a.x>-50 && a.x<canvas.width+50 &&
+    a.y>-50 && a.y<canvas.height+50
   );
 
+  checkCollisions();
+
+  // Pings
+  const now=Date.now();
+  pings.forEach(p=>{
+    const prog=(now-p.start)/CONFIG.pingDuration;
+    const size=prog*50;
+
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,size,0,Math.PI*2);
+    ctx.globalAlpha=1-prog;
+    ctx.strokeStyle="#00ff96";
+    ctx.stroke();
+    ctx.globalAlpha=1;
+  });
+
+  pings=pings.filter(p=>now-p.start<CONFIG.pingDuration);
+
   // Spawn
-  if (time - lastSpawn > CONFIG.aircraftSpawnRate) {
+  if(time-lastSpawn>CONFIG.spawnRate){
     spawnAircraft();
-    lastSpawn = time;
+    lastSpawn=time;
   }
 
   requestAnimationFrame(draw);
 }
 
 requestAnimationFrame(draw);
+
+function toggleTrails(){ trailsEnabled=!trailsEnabled; }
 </script>
 
 </body>
