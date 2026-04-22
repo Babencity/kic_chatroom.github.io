@@ -21,24 +21,19 @@ canvas {
   left: 0;
 }
 
-/* ================= CHAT FIX ================= */
 .chat-container {
   position: fixed;
   right: 20px;
   bottom: 20px;
-
   width: min(380px, calc(100vw - 20px));
   height: min(550px, calc(100vh - 40px));
-
   z-index: 10;
 }
 
-/* ================= DESIGN ================= */
 .chatroom {
   height: 100% !important;
   display: flex;
   flex-direction: column;
-
   background: rgba(10,20,30,0.7) !important;
   backdrop-filter: blur(15px);
   border-radius: 15px;
@@ -60,25 +55,13 @@ canvas {
   background: rgba(255,255,255,0.08);
 }
 
-.chatroom .head {
-  font-size: 16px;
-  padding: 10px;
-  color: #00ff96 !important;
-  border-bottom: 1px solid rgba(0,255,150,0.3);
-}
-
 .chatroom .footer {
   padding: 8px;
-  border-top: 1px solid rgba(0,255,150,0.2);
 }
 
 .chatroom #textInput {
   height: 40px !important;
   font-size: 14px;
-  padding: 5px;
-  background: rgba(0,0,0,0.4);
-  color: white;
-  border: 1px solid rgba(0,255,150,0.3);
 }
 </style>
 </head>
@@ -92,8 +75,8 @@ canvas {
 <script>
 // ================= CONFIG =================
 const CONFIG = {
-  aircraftSpawnRate: 12000,
-  aircraftSpeed: 0.7,
+  aircraftSpawnRate: 8000,
+  aircraftSpeed: 1.2,
   pingDuration: 1000
 };
 
@@ -130,56 +113,52 @@ function playSound(freq, volume = 0.1) {
 let aircrafts = [];
 let pings = [];
 
-// ================= OBJECTS =================
+// ================= AIRCRAFT LOGIK =================
 function spawnAircraft() {
+  const edge = Math.floor(Math.random() * 4);
+  let x, y;
+
+  // Spawn an zufälligem Rand
+  if (edge === 0) { // links
+    x = -20;
+    y = Math.random() * canvas.height;
+  } else if (edge === 1) { // rechts
+    x = canvas.width + 20;
+    y = Math.random() * canvas.height;
+  } else if (edge === 2) { // oben
+    x = Math.random() * canvas.width;
+    y = -20;
+  } else { // unten
+    x = Math.random() * canvas.width;
+    y = canvas.height + 20;
+  }
+
+  // Ziel irgendwo im Bildschirm
+  const targetX = Math.random() * canvas.width;
+  const targetY = Math.random() * canvas.height;
+
+  const dx = targetX - x;
+  const dy = targetY - y;
+  const length = Math.sqrt(dx * dx + dy * dy);
+
   aircrafts.push({
-    x: -20,
-    y: Math.random() * canvas.height,
-    speed: Math.random() * 0.5 + CONFIG.aircraftSpeed,
-    angle: 0
+    x,
+    y,
+    vx: (dx / length) * CONFIG.aircraftSpeed,
+    vy: (dy / length) * CONFIG.aircraftSpeed,
+    angle: Math.atan2(dy, dx)
   });
+
   playSound(600, 0.05);
 }
-
-function createPing(x, y, danger = false) {
-  pings.push({ x, y, start: Date.now(), danger });
-  playSound(danger ? 150 : 880, 0.15);
-}
-
-// ================= EVENTS =================
-document.addEventListener("mousedown", (e) => {
-  if (e.target.closest(".chatroom")) return;
-  createPing(e.clientX, e.clientY);
-});
-
-// ================= CHAT =================
-const chatroom = new window.Chatroom({
-  host: "https://curly-broccoli-97pg666gr9w4c76j9-5005.app.github.dev",
-  title: "SkyNet Terminal",
-  container: document.querySelector(".chat-container"),
-  welcomeMessage: "System Ready.",
-  onMessageReceived: function(message) {
-    if (message.text?.toLowerCase().includes("alert")) {
-      document.body.style.background = "#440000";
-      createPing(canvas.width / 2, canvas.height / 2, true);
-      setTimeout(() => document.body.style.background = "#0b0e14", 500);
-    }
-  }
-});
-chatroom.openChat();
-
-// ================= DRAW =================
-let lastSpawn = 0;
 
 function drawAircraft(a) {
   ctx.save();
   ctx.translate(a.x, a.y);
-
-  // Rotation je nach Richtung
   ctx.rotate(a.angle);
 
   ctx.beginPath();
-  ctx.moveTo(10, 0);   // Spitze
+  ctx.moveTo(10, 0);
   ctx.lineTo(-6, -4);
   ctx.lineTo(-3, 0);
   ctx.lineTo(-6, 4);
@@ -190,6 +169,24 @@ function drawAircraft(a) {
 
   ctx.restore();
 }
+
+// ================= EVENTS =================
+document.addEventListener("mousedown", (e) => {
+  if (e.target.closest(".chatroom")) return;
+  pings.push({ x: e.clientX, y: e.clientY, start: Date.now() });
+});
+
+// ================= CHAT =================
+const chatroom = new window.Chatroom({
+  host: "https://curly-broccoli-97pg666gr9w4c76j9-5005.app.github.dev",
+  title: "SkyNet Terminal",
+  container: document.querySelector(".chat-container"),
+  welcomeMessage: "System Ready."
+});
+chatroom.openChat();
+
+// ================= LOOP =================
+let lastSpawn = 0;
 
 function draw(time) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -212,31 +209,18 @@ function draw(time) {
   ctx.fillStyle = "rgba(0,255,150,0.1)";
   ctx.fill();
 
-  // Aircrafts
+  // Flugzeuge bewegen
   aircrafts.forEach(a => {
-    a.x += a.speed;
-    a.angle = 0; // fliegt nach rechts
-
+    a.x += a.vx;
+    a.y += a.vy;
     drawAircraft(a);
   });
 
-  aircrafts = aircrafts.filter(a => a.x < canvas.width);
-
-  // Pings
-  const now = Date.now();
-  pings.forEach(p => {
-    const progress = (now - p.start) / CONFIG.pingDuration;
-    const size = progress * 50;
-
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
-    ctx.strokeStyle = p.danger ? "#ff4b2b" : "#00ff96";
-    ctx.globalAlpha = 1 - progress;
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-  });
-
-  pings = pings.filter(p => now - p.start < CONFIG.pingDuration);
+  // Entfernen wenn außerhalb
+  aircrafts = aircrafts.filter(a =>
+    a.x > -50 && a.x < canvas.width + 50 &&
+    a.y > -50 && a.y < canvas.height + 50
+  );
 
   // Spawn
   if (time - lastSpawn > CONFIG.aircraftSpawnRate) {
